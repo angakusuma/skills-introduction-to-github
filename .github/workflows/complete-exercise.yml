@@ -1,0 +1,70 @@
+name: Complete Exercise
+
+on:
+  push:
+    branches:
+      - "copilot/explore-codebase-implementation-plan-again"
+    paths:
+      - ".github/workflows/complete-exercise.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  complete_exercise:
+    name: Complete Exercise Steps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Step 1 - Create my-first-branch
+        run: |
+          git checkout -b my-first-branch
+          git push origin my-first-branch
+          echo "Pushed my-first-branch (Step 1)"
+
+      - name: Wait for Step 1 workflow
+        run: sleep 90
+
+      - name: Step 2 - Commit PROFILE.md
+        run: |
+          echo "Welcome to my GitHub profile!" > PROFILE.md
+          git add PROFILE.md
+          git commit -m "Add PROFILE.md"
+          git push origin my-first-branch
+          echo "Committed PROFILE.md to my-first-branch (Step 2)"
+
+      - name: Wait for Step 2 workflow
+        run: sleep 90
+
+      - name: Step 3 - Open a pull request
+        run: |
+          gh pr create \
+            --base main \
+            --head my-first-branch \
+            --title "Add my first file" \
+            --body "In this pull request I added a new file called PROFILE.md with a welcome message for my GitHub profile."
+          echo "Created pull request (Step 3)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Step 3 workflow
+        run: sleep 90
+
+      - name: Step 4 - Merge pull request
+        run: |
+          gh pr merge my-first-branch --merge --admin
+          echo "Merged pull request (Step 4)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
