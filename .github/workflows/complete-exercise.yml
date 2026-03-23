@@ -1,0 +1,123 @@
+name: Complete Exercise
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  complete_exercise:
+    name: Complete Exercise Steps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin
+
+      - name: Step 1 - Create my-first-branch if not exists
+        run: |
+          if git ls-remote --heads origin my-first-branch | grep -q my-first-branch; then
+            echo "my-first-branch already exists, skipping"
+          else
+            git checkout -b my-first-branch
+            git push origin my-first-branch
+            echo "Created and pushed my-first-branch (Step 1)"
+          fi
+
+      - name: Wait for Step 1 workflow to complete
+        run: |
+          echo "Waiting for Step 1 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 1" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 1 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Step 2 - Add PROFILE.md if not exists
+        run: |
+          git fetch origin my-first-branch
+          git checkout my-first-branch
+          if [ -f PROFILE.md ]; then
+            echo "PROFILE.md already exists, skipping"
+          else
+            echo "Welcome to my GitHub profile!" > PROFILE.md
+            git add PROFILE.md
+            git commit -m "Add PROFILE.md"
+            git push origin my-first-branch
+            echo "Committed PROFILE.md (Step 2)"
+          fi
+
+      - name: Wait for Step 2 workflow to complete
+        run: |
+          echo "Waiting for Step 2 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 2" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 2 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Step 3 - Create PR if not exists
+        run: |
+          EXISTING=$(gh pr list --base main --head my-first-branch --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists, skipping"
+          else
+            gh pr create \
+              --base main \
+              --head my-first-branch \
+              --title "Add my first file" \
+              --body "In this pull request I added a new file called PROFILE.md with a welcome message for my GitHub profile."
+            echo "Created pull request (Step 3)"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for Step 3 workflow to complete
+        run: |
+          echo "Waiting for Step 3 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 3" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 3 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Step 4 - Merge pull request
+        run: |
+          PR_NUMBER=$(gh pr list --base main --head my-first-branch --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found, may already be merged"
+          else
+            gh pr merge "$PR_NUMBER" --merge --admin
+            echo "Merged pull request #$PR_NUMBER (Step 4)"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
