@@ -1,9 +1,6 @@
 name: Complete Exercise
 
 on:
-  push:
-    branches:
-      - "copilot/explore-codebase-implementation-plan-again"
   workflow_dispatch:
 
 permissions:
@@ -38,8 +35,20 @@ jobs:
             echo "Created and pushed my-first-branch (Step 1)"
           fi
 
-      - name: Wait for Step 1 workflow
-        run: sleep 90
+      - name: Wait for Step 1 workflow to complete
+        run: |
+          echo "Waiting for Step 1 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 1" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 1 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Step 2 - Add PROFILE.md if not exists
         run: |
@@ -55,8 +64,20 @@ jobs:
             echo "Committed PROFILE.md (Step 2)"
           fi
 
-      - name: Wait for Step 2 workflow
-        run: sleep 90
+      - name: Wait for Step 2 workflow to complete
+        run: |
+          echo "Waiting for Step 2 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 2" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 2 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Step 3 - Create PR if not exists
         run: |
@@ -74,14 +95,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wait for Step 3 workflow
-        run: sleep 90
+      - name: Wait for Step 3 workflow to complete
+        run: |
+          echo "Waiting for Step 3 workflow..."
+          for i in $(seq 1 20); do
+            sleep 15
+            STATUS=$(gh run list --workflow="Step 3" --branch=my-first-branch --status=completed -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "")
+            if [ "$STATUS" = "success" ]; then
+              echo "Step 3 workflow completed successfully"
+              break
+            fi
+            echo "Still waiting... attempt $i/20"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Step 4 - Merge pull request
         run: |
           PR_NUMBER=$(gh pr list --base main --head my-first-branch --json number --jq '.[0].number' 2>/dev/null || echo "")
           if [ -z "$PR_NUMBER" ]; then
-            echo "No open PR found, checking if already merged"
+            echo "No open PR found, may already be merged"
           else
             gh pr merge "$PR_NUMBER" --merge --admin
             echo "Merged pull request #$PR_NUMBER (Step 4)"
